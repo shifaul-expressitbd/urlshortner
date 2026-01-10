@@ -42,7 +42,8 @@ export class CsrfMiddleware implements NestMiddleware {
           this.configService.get<string>('HTTPS_ENABLED', 'false') === 'true',
         sameSite: 'strict',
       });
-      return next();
+      res.json({ message: 'CSRF token set' });
+      return;
     }
 
     // Skip CSRF for other public routes

@@ -92,13 +92,23 @@ export class AuthenticationService {
   async validateUser(email: string, password: string): Promise<any> {
     try {
       const user = await this.usersService.findByEmail(email);
-      if (!user) throw new UnauthorizedException('Invalid credentials');
+      this.logger.log(`🔍 ValidateUser: Found user? ${!!user}`);
+
+      if (!user) {
+        this.logger.warn(`❌ User not found: ${email}`);
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      this.logger.log(`🔍 User details: Verified=${user.isEmailVerified}, HasPassword=${!!user.password}`);
+
       if (!user.isEmailVerified)
         throw new UnauthorizedException('Please verify your email');
       if (!user.password)
         throw new UnauthorizedException('Login with social account');
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
+      this.logger.log(`🔍 Password valid? ${isPasswordValid}`);
+
       if (!isPasswordValid)
         throw new UnauthorizedException('Invalid credentials');
 
