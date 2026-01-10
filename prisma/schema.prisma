@@ -1,0 +1,502 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "generated"
+  previewFeatures = ["fullTextSearchPostgres"]
+  moduleFormat    = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["system", "base"]
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id                 String     @id @default(cuid())
+  email              String     @unique @db.VarChar(255)
+  firstName          String     @db.VarChar(255)
+  lastName           String     @db.VarChar(255)
+  password           String?    @db.VarChar(255)
+  avatar             String?
+  systemRole         SystemRole @default(USER)
+  status             UserStatus @default(ACTIVE)
+  isEmailVerified    Boolean    @default(false)
+  emailVerifiedAt    DateTime?
+  verificationToken  String?    @unique
+  isTwoFactorEnabled Boolean    @default(false)
+  twoFactorSecret    String?    @db.VarChar(255)
+  backupCodes        String[]   @default([])
+  suspensionReason   String?
+  suspendedAt        DateTime?
+  deletedAt          DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  // Relations - Auth
+  authProviders  AuthProvider[]
+  passwordResets PasswordResetRequest[]
+  sessions       UserSession[]
+
+  // Relations - Logging
+  activityLogs ActivityLog[]
+  changeLogs   ChangeLog[]
+
+  // Relations - URL Shortener
+  shortenedUrls ShortenedUrl[]
+  urlFolders    UrlFolder[]
+  urlTags       UrlTag[]
+  apiKeys       ApiKey[]
+  customDomains CustomDomain[]
+
+  @@index([email, status])
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@index([firstName, lastName])
+  @@index([systemRole])
+  @@map("users")
+  @@schema("base")
+}
+
+model AuthProvider {
+  id             String           @id @default(cuid())
+  userId         String
+  provider       AuthProviderType
+  providerId     String           @db.VarChar(255)
+  email          String?          @db.VarChar(255)
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  providerData   Json?
+  isPrimary      Boolean          @default(false)
+  linkedAt       DateTime         @default(now())
+  lastUsedAt     DateTime?
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([provider])
+  @@index([providerId])
+  @@map("auth_providers")
+  @@schema("base")
+}
+
+model UserSession {
+  id                          String    @id @default(cuid())
+  userId                      String
+  sessionId                   String    @unique @db.VarChar(255)
+  deviceInfo                  Json?
+  ipAddress                   String?   @db.VarChar(45)
+  userAgent                   String?
+  location                    String?   @db.VarChar(100)
+  browserFingerprintHash      String?   @db.VarChar(255)
+  deviceFingerprintConfidence Float?    @default(0.5)
+  latitude                    Float?
+  longitude                   Float?
+  timezone                    String?   @db.VarChar(50)
+  riskScore                   Float     @default(0)
+  lastIpChangeAt              DateTime?
+  accessCount                 Int       @default(0)
+  unusualActivityCount        Int       @default(0)
+  isActive                    Boolean   @default(true)
+  expiresAt                   DateTime
+  lastActivity                DateTime  @default(now())
+  rememberMe                  Boolean   @default(false)
+  invalidatedAt               DateTime?
+  invalidationReason          String?   @db.VarChar(100)
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([expiresAt])
+  @@index([riskScore])
+  @@index([ipAddress, createdAt])
+  @@map("user_sessions")
+  @@schema("base")
+}
+
+model PasswordResetRequest {
+  id          String    @id @default(cuid())
+  token       String    @unique @db.VarChar(255)
+  userId      String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  cancelledAt DateTime?
+  ipAddress   String?   @db.VarChar(45)
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_reset_requests")
+  @@schema("base")
+}
+
+// ============================================
+// URL SHORTENER - CORE
+// ============================================
+
+model ShortenedUrl {
+  id          String  @id @default(cuid())
+  shortCode   String  @unique @db.VarChar(12)
+  customAlias String? @unique @db.VarChar(50)
+  originalUrl String  @db.Text
+  title       String? @db.VarChar(255)
+  description String? @db.Text
+
+  // Ownership (null = anonymous)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Custom Domain (optional - uses default domain if null)
+  domainId String?
+  domain   CustomDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+
+  // Organization
+  folderId String?
+  folder   UrlFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tags     UrlTag[]
+
+  // Settings
+  password  String?   @db.VarChar(255)
+  expiresAt DateTime?
+  maxClicks Int?
+  isActive  Boolean   @default(true)
+
+  // Analytics Summary (denormalized for performance)
+  totalClicks  Int       @default(0)
+  uniqueClicks Int       @default(0)
+  lastClickAt  DateTime?
+
+  // QR Code
+  qrCodeUrl String?
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  clicks Click[]
+
+  @@index([shortCode])
+  @@index([customAlias])
+  @@index([userId])
+  @@index([domainId])
+  @@index([folderId])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@map("shortened_urls")
+  @@schema("base")
+}
+
+// ============================================
+// URL SHORTENER - ANALYTICS
+// ============================================
+
+model Click {
+  id    String       @id @default(cuid())
+  urlId String
+  url   ShortenedUrl @relation(fields: [urlId], references: [id], onDelete: Cascade)
+
+  // Tracking Data
+  ipAddress String? @db.VarChar(45)
+  ipHash    String? @db.VarChar(64)
+  userAgent String?
+  referer   String? @db.Text
+
+  // Geo Data
+  country     String? @db.VarChar(2)
+  countryName String? @db.VarChar(100)
+  region      String? @db.VarChar(100)
+  city        String? @db.VarChar(100)
+
+  // Device Data
+  deviceType     DeviceType?
+  browser        String?     @db.VarChar(50)
+  browserVersion String?     @db.VarChar(20)
+  os             String?     @db.VarChar(50)
+  osVersion      String?     @db.VarChar(20)
+
+  // UTM Parameters
+  utmSource   String? @db.VarChar(100)
+  utmMedium   String? @db.VarChar(100)
+  utmCampaign String? @db.VarChar(100)
+  utmTerm     String? @db.VarChar(100)
+  utmContent  String? @db.VarChar(100)
+
+  createdAt DateTime @default(now())
+
+  @@index([urlId])
+  @@index([urlId, createdAt])
+  @@index([country])
+  @@index([deviceType])
+  @@index([createdAt])
+  @@map("clicks")
+  @@schema("base")
+}
+
+// ============================================
+// URL SHORTENER - ORGANIZATION
+// ============================================
+
+model UrlFolder {
+  id          String         @id @default(cuid())
+  name        String         @db.VarChar(100)
+  description String?        @db.Text
+  color       String?        @db.VarChar(7)
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      UrlFolder?     @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children    UrlFolder[]    @relation("FolderHierarchy")
+  urls        ShortenedUrl[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([userId, name, parentId])
+  @@index([userId])
+  @@map("url_folders")
+  @@schema("base")
+}
+
+model UrlTag {
+  id        String         @id @default(cuid())
+  name      String         @db.VarChar(50)
+  color     String?        @db.VarChar(7)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  urls      ShortenedUrl[]
+  createdAt DateTime       @default(now())
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("url_tags")
+  @@schema("base")
+}
+
+// ============================================
+// CUSTOM DOMAINS
+// ============================================
+
+model CustomDomain {
+  id     String @id @default(cuid())
+  domain String @unique @db.VarChar(255)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Verification
+  verificationStatus DomainStatus @default(PENDING)
+  verificationToken  String?      @db.VarChar(64)
+  verifiedAt         DateTime?
+
+  // SSL Configuration
+  sslStatus    SslStatus @default(PENDING)
+  sslExpiresAt DateTime?
+
+  // Settings
+  isActive     Boolean      @default(false)
+  redirectType RedirectType @default(TEMPORARY)
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  urls ShortenedUrl[]
+
+  @@index([domain])
+  @@index([userId])
+  @@index([verificationStatus])
+  @@map("custom_domains")
+  @@schema("base")
+}
+
+// ============================================
+// API ACCESS
+// ============================================
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String    @db.VarChar(100)
+  keyHash     String    @unique @db.VarChar(64)
+  keyPrefix   String    @db.VarChar(8)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissions String[]
+  rateLimit   Int       @default(1000)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([keyHash])
+  @@index([userId])
+  @@map("api_keys")
+  @@schema("base")
+}
+
+// ============================================
+// SYSTEM - LOGGING
+// ============================================
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String   @db.VarChar(100)
+  resource   String?  @db.VarChar(100)
+  resourceId String?
+  details    Json?
+  ipAddress  String?  @db.VarChar(45)
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("activity_logs")
+  @@schema("system")
+}
+
+model ActivityLogArchive {
+  id         String   @id
+  userId     String?
+  action     String   @db.VarChar(100)
+  resource   String?  @db.VarChar(100)
+  resourceId String?
+  details    Json?
+  ipAddress  String?  @db.VarChar(45)
+  userAgent  String?
+  createdAt  DateTime
+  archivedAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs_archive")
+  @@schema("system")
+}
+
+model ChangeLog {
+  id            String   @id @default(cuid())
+  modelName     String   @db.VarChar(100)
+  recordId      String
+  action        String   @db.VarChar(50)
+  oldData       Json?
+  newData       Json?
+  changedFields String[]
+  rowHash       String?
+  clientIp      String?  @db.VarChar(45)
+  userAgent     String?
+  changeReason  String?
+  isHighRisk    Boolean  @default(false)
+  changedById   String?
+  createdAt     DateTime @default(now())
+  changedBy     User?    @relation(fields: [changedById], references: [id])
+
+  @@index([modelName, recordId])
+  @@index([changedById])
+  @@index([createdAt])
+  @@map("change_logs")
+  @@schema("system")
+}
+
+model ChangeLogArchive {
+  id            String   @id
+  modelName     String   @db.VarChar(100)
+  recordId      String
+  action        String   @db.VarChar(50)
+  oldData       Json?
+  newData       Json?
+  changedFields String[]
+  rowHash       String?
+  clientIp      String?  @db.VarChar(45)
+  userAgent     String?
+  changeReason  String?
+  isHighRisk    Boolean  @default(false)
+  changedById   String?
+  createdAt     DateTime
+  archivedAt    DateTime @default(now())
+
+  @@index([modelName, recordId])
+  @@index([changedById])
+  @@index([createdAt])
+  @@map("change_logs_archive")
+  @@schema("system")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum SystemRole {
+  SYSTEM_ADMIN
+  SYSTEM_DEVELOPER
+  SYSTEM_AGENT
+  USER
+
+  @@schema("base")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DELETED
+
+  @@schema("base")
+}
+
+enum AuthProviderType {
+  LOCAL
+  GOOGLE
+  FACEBOOK
+  GITHUB
+
+  @@schema("base")
+}
+
+enum DeviceType {
+  DESKTOP
+  MOBILE
+  TABLET
+  BOT
+  UNKNOWN
+
+  @@schema("base")
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  EXPIRED
+
+  @@schema("base")
+}
+
+enum SslStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  FAILED
+
+  @@schema("base")
+}
+
+enum RedirectType {
+  PERMANENT // 301
+  TEMPORARY // 302
+
+  @@schema("base")
+}
