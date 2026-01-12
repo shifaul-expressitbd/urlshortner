@@ -9,6 +9,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
+import { DomainRedirectMiddleware } from './common/middleware/domain-redirect.middleware';
 import { UrlConfigService } from './config/url.config';
 import { createSwaggerConfig, SWAGGER_CONFIG } from './swagger/swagger.config';
 import { LoggerService } from './utils/logger/logger.service';
@@ -23,6 +24,9 @@ async function bootstrap() {
   // Apply CSRF middleware
   const csrfMiddleware = app.get(CsrfMiddleware);
   app.use((req, res, next) => csrfMiddleware.use(req, res, next));
+
+  // Apply Domain Redirect Middleware (Global)
+  app.use(new DomainRedirectMiddleware().use);
 
   // Set global prefix
   app.setGlobalPrefix('api', {
