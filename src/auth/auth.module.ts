@@ -54,12 +54,12 @@ import { RefreshTokenStrategy } from './token/strategies/refresh-token.strategy'
           secret,
           signOptions: {
             expiresIn: accessTokenExpiresInSeconds,
-            issuer: 'backend.shifaul.dev-api',
-            audience: 'backend.shifaul.dev-client',
+            issuer: 'cutzy.app-api',
+            audience: 'cutzy.app-client',
           },
           verifyOptions: {
-            issuer: 'backend.shifaul.dev-api',
-            audience: 'backend.shifaul.dev-client',
+            issuer: 'cutzy.app-api',
+            audience: 'cutzy.app-client',
           },
         };
       },
@@ -103,4 +103,4 @@ import { RefreshTokenStrategy } from './token/strategies/refresh-token.strategy'
     PassportModule,
   ],
 })
-export class AuthModule {}
+export class AuthModule { }

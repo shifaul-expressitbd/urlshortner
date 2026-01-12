@@ -32,7 +32,7 @@ export class RedirectController {
   constructor(
     private readonly urlShortenerService: UrlShortenerService,
     private readonly analyticsService: AnalyticsService,
-  ) {}
+  ) { }
 
   /**
    * Check if URL requires password
@@ -68,7 +68,7 @@ export class RedirectController {
       // OR better: try to get url, and catch Forbidden (password required) to redirect to UI
       // But adhering to current logic:
       const { requiresPassword } = await this.urlShortenerService.checkPasswordRequired(code);
-      
+
       if (requiresPassword) {
         // Redirect to password entry page
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4173';
@@ -76,7 +76,7 @@ export class RedirectController {
       }
 
       const url = await this.urlShortenerService.getUrlForRedirect(code);
-      
+
       // Track click asynchronously with detailed analytics
       if (url) {
         this.analyticsService.recordClick(
@@ -88,13 +88,13 @@ export class RedirectController {
           },
         ).catch((err) => console.error('Failed to record click:', err));
       }
-      
+
       return res.redirect(HttpStatus.FOUND, url.originalUrl);
     } catch (error) {
-       // If standard error, let it propagate (global filter handles it?), 
-       // but for redirect we usually want to show a custom 404 page
-       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4173';
-       return res.redirect(`${frontendUrl}/not-found`);
+      // If standard error, let it propagate (global filter handles it?), 
+      // but for redirect we usually want to show a custom 404 page
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4173';
+      return res.redirect(`${frontendUrl}/not-found`);
     }
   }
 
@@ -119,17 +119,17 @@ export class RedirectController {
   ) {
     try {
       const url = await this.urlShortenerService.getUrlForRedirect(code, password);
-      
+
       // Track click asynchronously
       if (url) {
         this.analyticsService.recordClick({
-            urlId: url.id,
-            ipAddress: (req.headers['x-forwarded-for'] as string) || req.ip,
-            userAgent: req.headers['user-agent'],
-            referer: req.headers['referer'],
+          urlId: url.id,
+          ipAddress: (req.headers['x-forwarded-for'] as string) || req.ip,
+          userAgent: req.headers['user-agent'],
+          referer: req.headers['referer'],
         }).catch((err) => console.error('Failed to record click:', err));
       }
-      
+
       return res.json({ success: true, redirectUrl: url.originalUrl });
     } catch (error) {
       if (error.status === 403) {
@@ -152,7 +152,7 @@ export class RedirectController {
 @ApiTags('URL Shortener')
 @Controller('urls')
 export class UrlApiController {
-  constructor(private readonly urlShortenerService: UrlShortenerService) {}
+  constructor(private readonly urlShortenerService: UrlShortenerService) { }
 
   /**
    * Create a new shortened URL
@@ -173,7 +173,7 @@ export class UrlApiController {
       example: {
         id: 'clq1234567890abcdef',
         shortCode: 'summer24',
-        shortUrl: 'https://shifaul.dev/s/summer24',
+        shortUrl: 'https://cutzy.app/s/summer24',
         originalUrl: 'https://www.example.com/very/long/url',
         userId: 'user_123',
         createdAt: '2024-03-20T10:00:00Z',

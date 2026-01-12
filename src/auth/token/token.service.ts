@@ -57,7 +57,7 @@ export class TokenService {
     private readonly prisma: DatabaseService,
     private readonly usersService: UsersService,
     private readonly ipGeolocationService: IpGeolocationService,
-  ) {}
+  ) { }
 
   /**
    * Generate JWT tokens with session management
@@ -337,7 +337,7 @@ export class TokenService {
       );
       return { session, tokenFamily: payload.tokenFamily || null };
     } catch (error) {
-       this.logger.error(
+      this.logger.error(
         `Refresh token validation failed for user ${userId}:`,
         error.message,
       );
@@ -390,8 +390,8 @@ export class TokenService {
         secret: this.configService.get<string>('JWT_SECRET'),
         expiresIn: this.GTM_TOKEN_EXPIRY,
         noTimestamp: false,
-        audience: 'backend.shifaul.dev-gtm',
-        issuer: 'backend.shifaul.dev-auth',
+        audience: 'cutzy.app-gtm',
+        issuer: 'cutzy.app-auth',
       });
 
       // Calculate expiresIn for 15 minute token

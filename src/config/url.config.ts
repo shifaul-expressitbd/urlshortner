@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UrlConfigService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   /**
    * Get the backend URL from environment variable
@@ -21,7 +21,7 @@ export class UrlConfigService {
   getFrontendUrl(): string {
     return this.configService.get<string>(
       'FRONTEND_URL',
-      'https://shifaul.dev',
+      'https://cutzy.app',
     );
   }
 
@@ -56,8 +56,8 @@ export class UrlConfigService {
       'https://accounts.google.com', // Google OAuth
       'http://localhost:3000',       // Local development
       'http://localhost:40001',       // Local backend
-      'https://pos.shifaul.dev',     // Development domain
-      'https://posbackend.shifaul.dev', // Development backend
+      'https://pos.cutzy.app',     // Development domain
+      'https://cutzy.app', // Development backend
     ];
   }
 

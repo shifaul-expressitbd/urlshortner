@@ -23,7 +23,7 @@ export class UrlShortenerService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   /**
    * Create a new shortened URL
@@ -89,7 +89,7 @@ export class UrlShortenerService {
     // Generate QR code
     const fullUrl = this.getFullUrl(shortenedUrl.customAlias || shortenedUrl.shortCode);
     const qrCodeDataUrl = await this.generateQRCode(fullUrl);
-    
+
     // Update with QR code URL
     await this.prisma.shortenedUrl.update({
       where: { id: shortenedUrl.id },
@@ -123,7 +123,7 @@ export class UrlShortenerService {
         password: true,
         shortCode: true,
         customAlias: true,
-        userId: true, 
+        userId: true,
         // Select fields needed for analytics/logging but avoid description/title if large (optional optimization)
       }
     });

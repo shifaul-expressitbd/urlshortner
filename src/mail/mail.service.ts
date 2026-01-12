@@ -5,6 +5,7 @@ import { UrlConfigService } from '../config/url.config';
 import { UrlShortenerService } from '../url-shortener/url-shortener.service';
 
 interface EmailOptions {
+  from: string;
   to: string;
   subject: string;
   html: string;
@@ -28,6 +29,11 @@ export class MailService {
         user: this.configService.get('SMTP_USER'),
         pass: this.configService.get('SMTP_PASS'),
       },
+      debug: true,
+      logger: true,
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
   }
 
@@ -36,19 +42,19 @@ export class MailService {
     const longVerifyUrl =
       this.urlConfigService?.getEmailVerificationUrl(token) ||
       `${this.configService.get('FRONTEND_URL', 'http://localhost:4000')}/verify-email?token=${token}`;
-    
+
     // Attempt to shorten the URL
     let verifyUrl = longVerifyUrl;
     if (this.urlShortenerService) {
-        try {
-            // Create backend redirection URL using the short code
-            const result = await this.urlShortenerService.create({ originalUrl: longVerifyUrl });
-            const backendUrl = this.configService.get('BACKEND_URL', 'http://localhost:3000');
-            verifyUrl = `${backendUrl}/s/${result.shortCode}`;
-        } catch (error) {
-            this.logger.warn(`Failed to shorten verification URL: ${(error as Error).message}`);
-            // Fallback to long URL is automatic since verifyUrl was initialized with it
-        }
+      try {
+        // Create backend redirection URL using the short code
+        const result = await this.urlShortenerService.create({ originalUrl: longVerifyUrl });
+        const backendUrl = this.configService.get('BACKEND_URL', 'http://localhost:3000');
+        verifyUrl = `${backendUrl}/s/${result.shortCode}`;
+      } catch (error) {
+        this.logger.warn(`Failed to shorten verification URL: ${(error as Error).message}`);
+        // Fallback to long URL is automatic since verifyUrl was initialized with it
+      }
     }
 
     const html = `
@@ -60,7 +66,7 @@ export class MailService {
       </head>
       <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="margin: 0; font-size: 28px;">Welcome to Shifaul.dev! 🚀</h1>
+          <h1 style="margin: 0; font-size: 28px;">Welcome to cutzy.app! 🚀</h1>
         </div>
         
         <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
@@ -97,8 +103,9 @@ export class MailService {
     `;
 
     const mailOptions: EmailOptions = {
+      from: this.configService.get('SMTP_USER') || 'noreply@cutzy.app',
       to: email,
-      subject: '🔐 Verify Your Email Address - Shifaul.dev',
+      subject: '🔐 Verify Your Email Address - cutzy.app',
       html,
     };
 
@@ -165,8 +172,9 @@ export class MailService {
     `;
 
     const mailOptions: EmailOptions = {
+      from: this.configService.get('SMTP_USER') || 'noreply@cutzy.app',
       to: email,
-      subject: '🔑 Reset Your Password - Shifaul.dev',
+      subject: '🔑 Reset Your Password - cutzy.app',
       html,
     };
 
@@ -237,8 +245,9 @@ export class MailService {
     `;
 
     const mailOptions: EmailOptions = {
+      from: this.configService.get('SMTP_USER') || 'noreply@cutzy.app',
       to: email,
-      subject: `🚨 ${subject} - Shifaul.dev Security`,
+      subject: `🚨 ${subject} - cutzy.app Security`,
       html,
     };
 
@@ -305,8 +314,9 @@ export class MailService {
     `;
 
     const mailOptions: EmailOptions = {
+      from: this.configService.get('SMTP_USER') || 'noreply@cutzy.app',
       to: email,
-      subject: `📊 ${subject} - Shifaul.dev Security`,
+      subject: `📊 ${subject} - cutzy.app Security`,
       html,
     };
 

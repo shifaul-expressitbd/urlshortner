@@ -11,7 +11,7 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   @Public()
   @Get()
@@ -20,7 +20,7 @@ export class AppController {
   redirectToFrontend(@Res() res: ExpressResponse) {
     const frontendUrl = this.configService.get<string>(
       'FRONTEND_URL',
-      'https://shifaul.dev',
+      'https://cutzy.app',
     );
     return res.redirect(302, frontendUrl);
   }
