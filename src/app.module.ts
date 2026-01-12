@@ -29,6 +29,7 @@ import { UrlShortenerModule } from './url-shortener/url-shortener.module';
 import { OrganizationModule } from './organization/organization.module';
 import { DomainsModule } from './domains/domains.module';
 import { ApiRewriteMiddleware } from './common/middleware/api-rewrite.middleware';
+import { DomainRedirectMiddleware } from './common/middleware/domain-redirect.middleware';
 
 @Module({
   imports: [
@@ -122,6 +123,10 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(ApiRewriteMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
+
+    consumer
+      .apply(DomainRedirectMiddleware)
       .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }
